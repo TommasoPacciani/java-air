@@ -763,73 +763,48 @@ public class ASTConverter extends JavaToRascalConverter {
 
     @Override
     public boolean visit(InfixExpression node) {
-        Operator op = node.getOperator();
-        IValue leftSide = visitChild(node.getLeftOperand());
-        IValue rightSide = visitChild(node.getRightOperand());
+        String constructor = infixConstructor(node.getOperator());
+        ASTNode last = node.getRightOperand();
+        IValue result = constructExpressionNode(constructor, visitChild(node.getLeftOperand()), visitChild(last));
 
-        switch (op.toString()) {
-            case "*":
-                ownValue = constructExpressionNode("times", leftSide, rightSide);
-                break;
-            case "/":
-                ownValue = constructExpressionNode("divide", leftSide, rightSide);
-                break;
-            case "%":
-                ownValue = constructExpressionNode("remainder", leftSide, rightSide);
-                break;
-            case "+":
-                ownValue = constructExpressionNode("plus", leftSide, rightSide);
-                break;
-            case "-":
-                ownValue = constructExpressionNode("minus", leftSide, rightSide);
-                break;
-            case "<<":
-                ownValue = constructExpressionNode("leftShift", leftSide, rightSide);
-                break;
-            case ">>":
-                ownValue = constructExpressionNode("rightShift", leftSide, rightSide);
-                break;
-            case ">>>":
-                ownValue = constructExpressionNode("rightShiftSigned", leftSide, rightSide);
-                break;
-            case "<":
-                ownValue = constructExpressionNode("less", leftSide, rightSide);
-                break;
-            case ">":
-                ownValue = constructExpressionNode("greater", leftSide, rightSide);
-                break;
-            case "<=":
-                ownValue = constructExpressionNode("lessEquals", leftSide, rightSide);
-                break;
-            case ">=":
-                ownValue = constructExpressionNode("greaterEquals", leftSide, rightSide);
-                break;
-            case "==":
-                ownValue = constructExpressionNode("equals", leftSide, rightSide);
-                break;
-            case "!=":
-                ownValue = constructExpressionNode("notEquals", leftSide, rightSide);
-                break;
-            case "^":
-                ownValue = constructExpressionNode("xor", leftSide, rightSide);
-                break;
-            case "|":
-                ownValue = constructExpressionNode("or", leftSide, rightSide);
-                break;
-            case "&":
-                ownValue = constructExpressionNode("and", leftSide, rightSide);
-                break;
-            case "||":
-                ownValue = constructExpressionNode("conditionalOr", leftSide, rightSide);
-                break;
-            case "&&":
-                ownValue = constructExpressionNode("conditionalAnd", leftSide, rightSide);
-                break;
-            default:   
-            throw new IllegalArgumentException(node.getOperator().getClass().getCanonicalName());
+        // JDT stores `a + b + c + d` flat: a left operand, a right operand and the extended operands `c` and `d`.
+        // The M3 AST has binary operators only, so we nest to the left: `((a + b) + c) + d`.
+        for (Object operand : node.extendedOperands()) {
+            result = ((IConstructor) result).asWithKeywordParameters()
+                .setParameter("src", getSourceLocation(node.getLeftOperand(), last));
+            last = (ASTNode) operand;
+            result = constructExpressionNode(constructor, result, visitChild(last));
         }
 
+        ownValue = result;
+
         return false;
+    }
+
+    private String infixConstructor(Operator op) {
+        switch (op.toString()) {
+            case "*": return "times";
+            case "/": return "divide";
+            case "%": return "remainder";
+            case "+": return "plus";
+            case "-": return "minus";
+            case "<<": return "leftShift";
+            case ">>": return "rightShift";
+            case ">>>": return "rightShiftSigned";
+            case "<": return "less";
+            case ">": return "greater";
+            case "<=": return "lessEquals";
+            case ">=": return "greaterEquals";
+            case "==": return "equals";
+            case "!=": return "notEquals";
+            case "^": return "xor";
+            case "|": return "or";
+            case "&": return "and";
+            case "||": return "conditionalOr";
+            case "&&": return "conditionalAnd";
+            default:
+                throw new IllegalArgumentException(op.getClass().getCanonicalName());
+        }
     }
 
     @Override

@@ -192,6 +192,20 @@ public abstract class JavaToRascalConverter extends ASTVisitor {
         return values.sourceLocation(loc, 0, 0, 0, 0, 0, 0);
     }
 
+    /**
+     * The source location that starts where `first` starts and ends where `last` ends.
+     */
+    protected ISourceLocation getSourceLocation(ASTNode first, ASTNode last) {
+        int start = compilUnit.getExtendedStartPosition(first);
+        int end = compilUnit.getExtendedStartPosition(last) + compilUnit.getExtendedLength(last) - 1;
+
+        return values.sourceLocation(loc,
+            start, end - start + 1,
+            compilUnit.getLineNumber(start), compilUnit.getLineNumber(end),
+            // our end columns are exclusive
+            compilUnit.getColumnNumber(start), compilUnit.getColumnNumber(end) + 1);
+    }
+
     protected IValue visitChild(ASTNode node) {
         node.accept(this);
         return this.getValue();

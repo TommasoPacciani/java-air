@@ -208,3 +208,18 @@ public bool compareM3s(M3 a, M3 b) {
 	}
 	return ok;
 }
+
+@synopsis{A chain of one infix operator keeps all its operands, nested to the left}
+test bool infixOperatorChainsKeepAllOperands() {
+	ast = createAstFromString(|unknown:///Chain.java|, 
+		"class Chain {
+		'  boolean f(boolean a, boolean b, boolean c, boolean d) { return a && b && c && d; }
+		'  String g() { return \"x\" + \"y\" + 1 + \"z\"; }
+		'  int h(int a, int b, int c) { return a - b * 2 - c; }
+		'}", true);
+
+	return astNodeSpecification(ast)
+		&& /conditionalAnd(conditionalAnd(conditionalAnd(id("a"), id("b")), id("c")), id("d")) := ast
+		&& /plus(plus(plus(stringLiteral(_), stringLiteral(_)), number("1")), stringLiteral(_)) := ast
+		&& /minus(minus(id("a"), times(id("b"), number("2"))), id("c")) := ast;
+}
